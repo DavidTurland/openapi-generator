@@ -19,6 +19,7 @@ package org.openapitools.codegen.languages;
 
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.servers.Server;
@@ -26,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.openapitools.codegen.*;
 import org.openapitools.codegen.meta.features.*;
 import org.openapitools.codegen.model.ModelMap;
+import org.openapitools.codegen.model.ModelsMap;
 import org.openapitools.codegen.model.OperationMap;
 import org.openapitools.codegen.model.OperationsMap;
 import org.openapitools.codegen.utils.ModelUtils;
@@ -43,6 +45,7 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
     protected String implFolder = "impl";
     protected boolean isAddExternalLibs = true;
     protected boolean isUseStructModel = false;
+    protected String  jsonPackage ="rapidjson";
     public static final String OPTIONAL_EXTERNAL_LIB = "addExternalLibs";
     public static final String OPTIONAL_EXTERNAL_LIB_DESC = "Add the Possibility to fetch and compile external Libraries needed by this Framework.";
     public static final String OPTION_USE_STRUCT_MODEL = "useStructModel";
@@ -147,6 +150,7 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
         importMapping.put("std::string", "#include <string>");
         importMapping.put("Object", "#include \"Object.h\"");
         importMapping.put("nlohmann::json", "#include <nlohmann/json.hpp>");
+        importMapping.put("rapidjson", "#include <rapidjson/prettywriter.h>");
     }
 
     @Override
@@ -181,7 +185,8 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
         } else {
             additionalProperties.put(OPTIONAL_EXTERNAL_LIB, isAddExternalLibs);
         }
-
+        additionalProperties.put("jsonPackage", jsonPackage);
+        additionalProperties.put(jsonPackage, jsonPackage);
         setupModelTemplate();
     }
 
@@ -213,7 +218,7 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
     @Override
     public CodegenModel fromModel(String name, Schema model) {
         CodegenModel codegenModel = super.fromModel(name, model);
-
+        System.out.println("fromModel name " + name);
         Set<String> oldImports = codegenModel.imports;
         codegenModel.imports = new HashSet<>();
         for (String imp : oldImports) {
@@ -243,6 +248,7 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
 
             if (apiResponse != null) {
                 Schema response = ModelUtils.getSchemaFromResponse(apiResponse);
+                Content c = apiResponse.getContent();
                 if (response != null) {
                     CodegenProperty cm = fromProperty("response", response, false);
                     op.vendorExtensions.put("x-codegen-response", cm);
@@ -269,6 +275,9 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
         for (CodegenOperation op : operationList) {
             boolean consumeJson = false;
             boolean isParsingSupported = true;
+            if (op.vendorExtensions == null) {
+                op.vendorExtensions = new HashMap<>();
+            }            
             if (op.bodyParam != null) {
                 if (op.bodyParam.vendorExtensions == null) {
                     op.bodyParam.vendorExtensions = new HashMap<>();
@@ -284,7 +293,46 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
                     }
                 }
             }
+            if (op.produces != null) {
+                for (Map<String, String> produce : op.produces) {
+                	LOGGER.info("produces");
+                }
+            }
+            if (op.responses != null) {
+            	int numJsonResponses = 0;
+            	int numResponses = 0;
+            	boolean allJsonresponse = true;
+        		Object sch = null;            	
+                for (CodegenResponse response : op.responses) {
+                	if (null != response.jsonSchema) {
+                		LOGGER.info("response jsonSchema " + response.jsonSchema);
+                	}
+            		if(null !=response.getContent()) {
+	                	LinkedHashMap<String, CodegenMediaType> content = response.getContent();
+	                	for (Map.Entry<String, CodegenMediaType> entry : content.entrySet()) {
+	                	    String key = entry.getKey();
+	                	    numResponses++;
+	                	    if (key == "application/json") {
+	                        	sch = response.schema;	                	    	
+	                	    	LOGGER.info("response application/json");
+	                	    	numJsonResponses++;
+	                	    }else {
+	                	    	LOGGER.info("response not application/json, " + key);
+	                	    }	             
+	                	    
+	                	    CodegenMediaType value = entry.getValue();
+	                	    LOGGER.info("content" + key + value);                	    
+	                	}
+                	}
+                	LOGGER.info("response");
+                }
 
+                // CodegenModel getModelByName(final String name, final Map<String, ModelsMap> models) 
+                op.vendorExtensions.put("x-codegen-pistache-response-any-json",             (0 < numJsonResponses));
+                op.vendorExtensions.put("x-codegen-pistache-response-all-json",             (0 < numJsonResponses)  && (numJsonResponses == numResponses));
+                op.vendorExtensions.put("x-codegen-pistache-response-just-one-and-its-json", (1 == numJsonResponses) && (numJsonResponses == numResponses));              
+
+            }            
             op.httpMethod = op.httpMethod.substring(0, 1).toUpperCase(Locale.ROOT) + op.httpMethod.substring(1).toLowerCase(Locale.ROOT);
 
             for (CodegenParameter param : op.allParams) {
@@ -306,9 +354,6 @@ public class CppPistacheServerCodegen extends AbstractCppCodegen {
                 }
             }
 
-            if (op.vendorExtensions == null) {
-                op.vendorExtensions = new HashMap<>();
-            }
             op.vendorExtensions.put("x-codegen-pistache-consumes-json", consumeJson);
             op.vendorExtensions.put("x-codegen-pistache-is-parsing-supported", isParsingSupported);
 

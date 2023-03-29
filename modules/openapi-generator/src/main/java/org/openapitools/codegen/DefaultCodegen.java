@@ -468,7 +468,7 @@ public class DefaultCodegen implements CodegenConfig {
                 .put("indented_12", new IndentedLambda(12, " "))
                 .put("indented_16", new IndentedLambda(16, " "));
     }
-
+break me
     private void registerMustacheLambdas() {
         ImmutableMap<String, Lambda> lambdas = addMustacheLambdas().build();
 

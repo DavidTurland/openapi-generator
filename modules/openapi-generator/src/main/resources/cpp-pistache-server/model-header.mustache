@@ -8,11 +8,27 @@
 #ifndef {{classname}}_H_
 #define {{classname}}_H_
 
+    {{#vendorExtensions.x-codegen-pistache-response-json}}
+    // vendorExtensions.x-codegen-pistache-response-json
+    {{/vendorExtensions.x-codegen-pistache-response-json}}
+    
+    {{#vendorExtensions.x-codegen-pistache-response-just-one-json}}
+    // vendorExtensions.x-codegen-pistache-response-just-one-json
+    {{/vendorExtensions.x-codegen-pistache-response-just-one-json}}  
+    
+     {{#vendorExtensions.x-codegen-pistache-response-all-json}}
+    // vendorExtensions.x-codegen-pistache-response-all-json
+    {{/vendorExtensions.x-codegen-pistache-response-all-json}}     
+    
+
 {{{defaultInclude}}}
 {{#imports}}{{{this}}}
 {{/imports}}
-#include <nlohmann/json.hpp>
 
+{{#rapidjson}}
+#include <rapidjson/prettywriter.h>
+{{/rapidjson}}
+#include <nlohmann/json.hpp>
 namespace {{modelNamespace}}
 {
 
@@ -75,10 +91,91 @@ public:
     void setValue({{{this}}} value);
     {{{this}}}::e{{{this}}} getEnumValue() const;
     void setEnumValue({{{this}}}::e{{{this}}} value);{{/-first}}{{/anyOf}}{{/vendorExtensions.x-is-string-enum-container}}
+    {{#vendorExtensions.x-codegen-pistache-response-json}}
+    // vendorExtensions.x-codegen-pistache-response-json
+    {{/vendorExtensions.x-codegen-pistache-response-json}}
+    
+    {{#vendorExtensions.x-codegen-pistache-response-just-one-json}}
+    // vendorExtensions.x-codegen-pistache-response-just-one-json
+    {{/vendorExtensions.x-codegen-pistache-response-just-one-json}}  
+    
+     {{#vendorExtensions.x-codegen-pistache-response-all-json}}
+    // vendorExtensions.x-codegen-pistache-response-all-json
+    {{/vendorExtensions.x-codegen-pistache-response-all-json}}       
+    {{#rapidjson}}
+    void serialize(Writer& writer){
+		writer.StartObject();
+		{
+	    {{#vars}}
+	        // isContainer {{isContainer}}
+	        // isArray {{isArray}}
+	        // required {{required}}
+	        // name {{name}}
+	         
+		    {{#required}}
+			    {{#isContainer}}
+			        writer.StartArray();
+                    for (const auto& element : m_{{name}}){
+                        element.serialize(writer);
+                    }	
+                    writer.EndArray();		    
+			    {{/isContainer}}
+			    {{^isContainer}}
+			        
+			        {{#isFloat}}{{/isFloat}}
+				    writer.String("{{baseName}}");
+			        writer.String(m_{{name}});
+		        {{/isContainer}}
+		    {{/required}}
+		    {{^required}}
+		    if(o.{{nameInCamelCase}}IsSet(){{#isContainer}} || !o.m_{{name}}.empty(){{/isContainer}}){
+			    {{#isContainer}}
+                    for (const auto& element : m_{{name}}){
+                        element.serialize(writer);
+                    }			    
+			    {{/isContainer}}
+			    {{^isContainer}}
+				    writer.String("{{baseName}}");
+			        writer.String(m_{{name}});
+		        {{/isContainer}}
+		    }
+		    {{/required}}
+	    {{/vars}}
+	    {{#isEnum}}
+	      {{#allowableValues}}
+		    switch (o.getValue())
+		    {
+		        {{#enumVars}}
+		        {{#-first}}
+		        case {{classname}}::e{{classname}}::INVALID_VALUE_OPENAPI_GENERATED:
+		            j = "INVALID_VALUE_OPENAPI_GENERATED";
+		            break;
+		        {{/-first}}
+		        case {{classname}}::e{{classname}}::{{name}}:
+		            j = "{{value}}";
+		            break;
+		        {{/enumVars}}
+		    }
+	      {{/allowableValues}}
+	    {{/isEnum}}
+	    {{#vendorExtensions.x-is-string-enum-container}}
+	      {{#anyOf}}
+	        {{#-first}}
+	          o.m_value.serialize(writer);
+	        {{/-first}}
+	      {{/anyOf}}
+	    {{/vendorExtensions.x-is-string-enum-container}}	
+		
+		}
+		writer.EndObject();    
+    }
+    {{/rapidjson}}    
+
     friend {{declspec}} void to_json(nlohmann::json& j, const {{classname}}& o);
     friend {{declspec}} void from_json(const nlohmann::json& j, {{classname}}& o);{{#vendorExtensions.x-is-string-enum-container}}{{#anyOf}}{{#-first}}
     friend {{declspec}} void to_json(nlohmann::json& j, const {{{this}}}& o);
     friend {{declspec}} void from_json(const nlohmann::json& j, {{{this}}}& o);{{/-first}}{{/anyOf}}{{/vendorExtensions.x-is-string-enum-container}}
+
 protected:
     {{#vars}}
     {{{dataType}}} m_{{name}};

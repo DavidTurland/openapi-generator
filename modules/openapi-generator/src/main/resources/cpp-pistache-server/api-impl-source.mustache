@@ -16,6 +16,12 @@ using namespace {{modelNamespace}};{{/hasModelImport}}
 }
 
 {{#operation}}
+    // x-codegen-pistache-response-any-json              {{vendorExtensions.x-codegen-pistache-response-any-json}}
+    // x-codegen-pistache-response-all-json              {{vendorExtensions.x-codegen-pistache-response-all-json}}
+    // x-codegen-pistache-response-just-one-and-its-json {{vendorExtensions.x-codegen-pistache-response-just-one-and-its-json}}
+
+    
+
 {{#vendorExtensions.x-codegen-pistache-is-parsing-supported}}
 void {{classname}}Impl::{{operationIdSnakeCase}}({{#allParams}}const {{{dataType}}} &{{paramName}}{{^-last}}, {{/-last}}{{/allParams}}{{#hasParams}}, {{/hasParams}}Pistache::Http::ResponseWriter &response) {
     response.send(Pistache::Http::Code::Ok, "Do some magic\n");
